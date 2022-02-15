@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Sophistikated Zones
+Comment='Fancy' zones for KDE Plasma
+Icon=preferences-system-windows
+
+X-KDE-PluginInfo-Author=donniebreve
+X-KDE-PluginInfo-Email=donniebreve
+X-KDE-PluginInfo-Name=sophistikated-zones
+X-KDE-PluginInfo-Version=0.1
+X-KDE-PluginInfo-License=GPL
+
+Type=Service
+X-KDE-ServiceTypes=KWin/Script
+X-Plasma-API=javascript
+X-Plasma-MainScript=code/main.js
