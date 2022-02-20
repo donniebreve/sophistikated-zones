@@ -7,32 +7,30 @@
     GNU General Public License v2.0
 */
 
+// Configuration
 let padding = 10;
 let layout = {
     size: 1,
     direction: 'horizontal', // areas will be placed horizontally (in a row)
     areas: [
         {
-            size: 0.666
+            size: 0.6
         },
         {
-            size: 0.334,
+            size: 0.4,
             direction: 'vertical', // areas will be placed vertically (in a column)
             areas: [
                 {
-                    size: 0.5
+                    size: 0.6,
                 },
                 {
-                    size: 0.5
+                    size: 0.4,
                 }
             ]
         }
     ]
 }
 let spaces = [];
-calculateLayout(layout);
-printLayout(layout);
-printSpaces(spaces);
 
 // Flags
 var snap = true;
@@ -86,18 +84,16 @@ function overlapPercentage(rectangleOne, rectangleTwo) {
 }
 
 /**
- * Calculates the layout areas.
+ * Calculates the layout areas. Loops through all the children nodes (areas) of a node
+ * and calculates the width (if a horizontal group) or the height (if a vertical group).
+ * 
+ * Group nodes control the maximum size of children nodes.
+ * 
+ * Recursively calculates the children layout nodes.
  * 
  * @param {object} node The starting layout node.
  */
 function calculateLayout(node) {
-    if (!node.x && !node.y) {
-        let parent = workspace.clientArea(KWin.MaximizeArea, workspace.activeScreen, workspace.currentDesktop);
-        node.x = parent.x;
-        node.y = parent.y;
-        node.width = parent.width;
-        node.height = parent.height;
-    }
     node.isGroup = node.areas && node.areas.length > 0;
     if (node.isGroup) {
         for (var i = 0; i < node.areas.length; i++){
@@ -107,7 +103,7 @@ function calculateLayout(node) {
                 child.y = node.y;
                 child.height = node.height;
                 if (i > 0) {
-                    child.x = node.areas[i - 1].x + node.areas[i - 1].width + 1;
+                    child.x = node.areas[i - 1].x + node.areas[i - 1].width;
                 }
                 if (child.size && child.size > 0) {
                     child.width = Math.floor(node.width * child.size);
@@ -118,8 +114,8 @@ function calculateLayout(node) {
                 child.y = node.y;
                 child.width = node.width;
                 if (i > 0) {
-                    child.y = node.areas[i - 1].y + node.areas[i - 1].height + 1;
-                }
+                    child.y = node.areas[i - 1].y + node.areas[i - 1].height;
+                } 
                 if (child.size && child.size > 0) {
                     child.height = Math.floor(node.height * child.size);
                 }
@@ -129,6 +125,54 @@ function calculateLayout(node) {
     }
     else {
         spaces.push(node);
+    }
+}
+
+/**
+ * Applies gaps to the window spaces.
+ * 
+ * @param {object} parent The parent space (client area).
+ * @param {array} spaces An array of spaces.
+ */
+function applyGaps(parent, spaces) {
+    for (var i = 0; i < spaces.length; i++) {
+        let space = spaces[i];
+        if (Math.abs(space.x - parent.x) <= 1) {
+            // outside gap
+            space.x += padding;
+            space.width -= padding;
+        }
+        else {
+            // inside gap
+            space.x += Math.floor(padding / 2);
+            space.width -= Math.floor(padding / 2);
+        }
+        if (Math.abs(space.y - parent.y) <= 1) {
+            // outside gap
+            space.y += padding;
+            space.height -= padding;
+        }
+        else {
+            // inside gap
+            space.y += Math.floor(padding / 2);
+            space.height -= Math.floor(padding / 2);
+        }
+        if (Math.abs((space.x + space.width) - (parent.x + parent.width)) <= 1) {
+            // outside gap
+            space.width -= padding;
+        }
+        else {
+            // inside gap
+            space.width -= Math.floor(padding / 2);
+        }
+        if (Math.abs((space.y + space.height) - (parent.y + parent.height)) <= 1) {
+            // outside gap
+            space.height -= padding;
+        }
+        else {
+            // inside gap
+            space.height -= Math.floor(padding / 2);
+        }
     }
 }
 
@@ -194,7 +238,7 @@ var clientMoving = function(client) {
     let geometry = client.frameGeometry;
     for (var i = 0; i < spaces.length; i++) {
         let space = spaces[i];
-        if (isOverlapping(geometry, space) && overlapPercentage(geometry, space) > .5) {
+        if (isOverlapping(geometry, space) && overlapPercentage(geometry, space) > .6) {
             workspace.showOutline(space);
             break;
         }
@@ -210,7 +254,7 @@ var clientMoveStop = function(client) {
     let geometry = client.frameGeometry;
     for (var i = 0; i < spaces.length; i++) {
         let space = spaces[i];
-        if (isOverlapping(geometry, space) && overlapPercentage(geometry, space) > .5) {
+        if (isOverlapping(geometry, space) && overlapPercentage(geometry, space) > .6) {
             client.frameGeometry = space;
             break;
         }
@@ -235,6 +279,34 @@ for (var i = 0; i < clients.length; i++) {
 // Receive new client events
 workspace.clientAdded.connect(attachToClient);
 
+var recalculateLayout = function(event) {
+    print('trigger event::' + event + ', recalculating layout');
+    let parent = workspace.clientArea(KWin.MaximizeArea, workspace.activeScreen, workspace.currentDesktop);
+    layout.x = parent.x;
+    layout.y = parent.y;
+    layout.width = parent.width;
+    layout.height = parent.height;
+    spaces.length = 0;
+    calculateLayout(layout);
+    printLayout(layout);
+    if (padding > 0) {
+        applyGaps(parent, spaces);
+    }
+    printSpaces(spaces);
+}
+
+// Receive desktop layout changed events
+// This is also the primary entry point
+workspace.activitiesChanged.connect(function() { recalculateLayout('activitiesChanged'); } )
+workspace.activityAdded.connect(function() { recalculateLayout('activityAdded'); } )
+workspace.activityRemoved.connect(function() { recalculateLayout('activityRemoved'); } )
+workspace.currentActivityChanged.connect(function() { recalculateLayout('currentActivityChanged'); });
+workspace.currentDesktopChanged.connect(function() { recalculateLayout('currentDesktopChanged'); });
+workspace.numberDesktopsChanged.connect(function() { recalculateLayout('numberDesktopsChanged'); });
+workspace.numberScreensChanged.connect(function() { recalculateLayout('numberScreensChanged'); });
+workspace.screenResized.connect(function() { recalculateLayout('screenResized'); });
+recalculateLayout('loaded');
+
 // Shortcuts
 // ----------
 
@@ -242,4 +314,6 @@ function toggleSnap() {
     snap = !snap;
 }
 
-registerShortcut("Sophistikated Zones", "Toggle snapping", "Meta+Shift+Z", toggleSnap);
+registerShortcut('Sophistikated Zones', 'Sophistikated Zones: Toggle snapping', '', function(){
+    toggleSnap();
+});
