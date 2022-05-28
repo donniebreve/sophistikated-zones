@@ -129,6 +129,23 @@ function calculateLayout(node) {
 }
 
 /**
+ * Recalculates the current layout.
+ */
+function recalculateLayout() {
+    let parent = workspace.clientArea(KWin.MaximizeArea, workspace.activeScreen, workspace.currentDesktop);
+    layout.x = parent.x;
+    layout.y = parent.y;
+    layout.width = parent.width;
+    layout.height = parent.height;
+    spaces.length = 0;
+    calculateLayout(layout);
+    printLayout(layout);
+    if (padding > 0) {
+        applyGaps(parent, spaces);
+    }
+}
+
+/**
  * Applies gaps to the window spaces.
  * 
  * @param {object} parent The parent space (client area).
@@ -221,6 +238,7 @@ var clientMoveStart = function(client) {
     if (client == null) {
         return;
     }
+    recalculateLayout();
     workspace.hideOutline();
     resized = false;
 }
@@ -278,34 +296,6 @@ for (var i = 0; i < clients.length; i++) {
 
 // Receive new client events
 workspace.clientAdded.connect(attachToClient);
-
-var recalculateLayout = function(event) {
-    print('trigger event::' + event + ', recalculating layout');
-    let parent = workspace.clientArea(KWin.MaximizeArea, workspace.activeScreen, workspace.currentDesktop);
-    layout.x = parent.x;
-    layout.y = parent.y;
-    layout.width = parent.width;
-    layout.height = parent.height;
-    spaces.length = 0;
-    calculateLayout(layout);
-    printLayout(layout);
-    if (padding > 0) {
-        applyGaps(parent, spaces);
-    }
-    printSpaces(spaces);
-}
-
-// Receive desktop layout changed events
-// This is also the primary entry point
-workspace.activitiesChanged.connect(function() { recalculateLayout('activitiesChanged'); } )
-workspace.activityAdded.connect(function() { recalculateLayout('activityAdded'); } )
-workspace.activityRemoved.connect(function() { recalculateLayout('activityRemoved'); } )
-workspace.currentActivityChanged.connect(function() { recalculateLayout('currentActivityChanged'); });
-workspace.currentDesktopChanged.connect(function() { recalculateLayout('currentDesktopChanged'); });
-workspace.numberDesktopsChanged.connect(function() { recalculateLayout('numberDesktopsChanged'); });
-workspace.numberScreensChanged.connect(function() { recalculateLayout('numberScreensChanged'); });
-workspace.screenResized.connect(function() { recalculateLayout('screenResized'); });
-recalculateLayout('loaded');
 
 // Shortcuts
 // ----------

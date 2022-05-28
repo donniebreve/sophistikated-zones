@@ -39,7 +39,7 @@ You can also view logs using `journalctl -f -t kwin_x11`.
 
 # Debugging a packaged script
 
-When you have made it far enough to start testing the script using `kpackagetool5 --type=KWin/Script -i ~/Projects/sophistikated-zones/`, remember your up arrow friend! You will need to restart KWin after installing/upgrading the script to get things to refresh.
+When you have made it far enough to start testing the script using `kpackagetool5 --type=KWin/Script -u ~/Projects/sophistikated-zones/`, remember your up arrow friend! You will need to restart KWin after installing/upgrading the script to get things to refresh.
 
 # Shortcuts
 
